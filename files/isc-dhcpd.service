@@ -1,0 +1,22 @@
+
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+Description=ISC dhcp server fully from systemd
+After=network.target
+
+[Service]
+Type=oneshot
+# Six minute sleep needed by Raspbian 2018-07 because dhcpd gets unhappy if
+# the switch isn't up, the router isn't up, the internet isn't up, etc.
+# and the Pi sure boots fast after a power outage compared to the Juniper
+# switch.  Six minutes seems right for an EX3200, may be able to get away
+# with shorter for a 4200 or need more for a 2200.
+# 
+ExecStartPre=/bin/sh -c 'until ping -c1 8.8.8.8; do sleep 2; done;'
+#ExecStartPre=/bin/sleep 360
+ExecStart=/usr/sbin/dhcpd -4 -q -cf /etc/dhcp/dhcpd.conf 
+ExecStop=/bin/kill `cat /var/run/dhcpd.pid`
+RemainAfterExit=yes
+

@@ -1,0 +1,42 @@
+---
+
+# apparently isc-dhcpd won't start if there's no internet or maybe no dns yet
+# and there's no policykit1 installed?
+#
+# pi@raspi-woodburn-dhcpdns-ups:~ $ systemctl start isc-dhcpd
+# Failed to start isc-dhcpd.service: The name org.freedesktop.PolicyKit1 was not provided by any .service files
+# See system logs and 'systemctl status isc-dhcpd.service' for details.
+# pi@raspi-woodburn-dhcpdns-ups:~ $ 
+#
+# manually rebooting fixed, but whatever
+# - rs 20180913
+#
+
+  - apt: name=policykit-1 state=latest
+
+  - name: isc-dhcpd latest
+    apt: name=isc-dhcp-server state=latest
+
+  - name: checking for host custom dhcpd.conf
+    local_action:
+      module: stat
+      path: "{{ host_specific_files }}/dhcpd.conf"
+    register: dh
+
+
+  - name: host-custom dhcpd.conf
+    copy: src={{ host_specific_files }}/dhcpd.conf dest=/etc/dhcp owner=root group=root mode=0664
+    when: dh.stat.islnk is defined
+
+  - name: copying systemd service file for isc-dhcpd
+    copy: src=isc-dhcpd.service dest=/lib/systemd/system/ owner=root mode=0644
+
+  - name: kicking systemd in the pants
+    systemd: name=isc-dhcpd.service  enabled=yes state=stopped
+
+#  - systemd: name=isc-dhcpd.service  enabled=yes state=stopped
+
+#  - systemd: name=isc-dhcpd.service  enabled=yes state=started
+
+
+...
